@@ -12,7 +12,7 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let tutorials = [];
 let currentFilter = 'all';
 let stepCount = 0;
-let deleteTutorialId = null;
+let pendingDeleteId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     initNav();
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initAdminModal();
     initStepsModal();
     initScrollReveal();
-    initDeleteModal();
+    initConfirmDeleteModal();
 
     await checkAccess();
     await fetchTutorials();
@@ -115,18 +115,11 @@ function renderTutorials(filter = 'all') {
         return;
     }
 
-    const isAdmin = document.body.classList.contains('is-admin');
-
     grid.innerHTML = filtered.map(t => `
         <div class="tutorial-card" data-id="${t.id}">
             <div class="card-cat">${getCatIcon(t.category)} ${t.category}</div>
             <div class="card-title">${escapeHtml(t.title)}</div>
             <div class="card-content">${escapeHtml(t.content)}</div>
-            ${t.video_url ? `
-                <div class="video-wrapper">
-                    <iframe src="${getYoutubeEmbedUrl(t.video_url)}" frameborder="0" allowfullscreen></iframe>
-                </div>
-            ` : ''}
             <div class="card-footer">
                 <span class="card-date">${formatDate(t.created_at)}</span>
                 ${t.video_url
@@ -142,11 +135,6 @@ function renderTutorials(filter = 'all') {
                    </button>`
                 : ''
             }
-            ${isAdmin ? `
-                <button class="delete-tutorial-btn" data-id="${t.id}" data-title="${escapeHtml(t.title)}">
-                    <i class="fas fa-trash"></i> حذف الدرس
-                </button>
-            ` : ''}
         </div>
     `).join('');
 
@@ -160,7 +148,7 @@ function renderTutorials(filter = 'all') {
         }, i * 80);
 
         card.addEventListener('click', (e) => {
-            if (e.target.closest('.card-video-link') || e.target.closest('.view-steps-btn') || e.target.closest('.delete-tutorial-btn')) {
+            if (e.target.closest('.card-video-link') || e.target.closest('.view-steps-btn')) {
                 return;
             }
             const id = card.dataset.id;
@@ -175,15 +163,6 @@ function renderTutorials(filter = 'all') {
             const id = btn.dataset.id;
             const tutorial = tutorials.find(t => String(t.id) === String(id));
             if (tutorial) openStepsModal(tutorial);
-        });
-    });
-
-    grid.querySelectorAll('.delete-tutorial-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const id = btn.dataset.id;
-            const title = btn.dataset.title;
-            openDeleteModal(id, title);
         });
     });
 }
@@ -227,21 +206,73 @@ function openStepsModal(tutorial) {
     const modal = document.getElementById('stepsModal');
     const title = document.getElementById('stepsModalTitle');
     const content = document.getElementById('stepsContent');
+    const isAdmin = document.body.classList.contains('is-admin');
 
     title.textContent = tutorial.title;
-    content.innerHTML = renderSteps(tutorial.steps);
+    
+    let videoHtml = '';
+    if (tutorial.video_url) {
+        const embedUrl = getYoutubeEmbedUrl(tutorial.video_url);
+        videoHtml = `
+            <div class="video-container" style="margin: 1rem 0; border-radius: 12px; overflow: hidden;">
+                <iframe src="${embedUrl}" frameborder="0" allowfullscreen style="width:100%; height:300px; border-radius:12px;"></iframe>
+                <div style="margin-top: 0.5rem; text-align: center;">
+                    <a href="${tutorial.video_url}" target="_blank" class="btn btn-outline" style="font-size:0.8rem;">
+                        <i class="fab fa-youtube"></i> فتح الفيديو على يوتيوب
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+    
+    let descriptionHtml = '';
+    if (tutorial.content) {
+        descriptionHtml = `
+            <div style="margin: 1rem 0; padding: 1rem; background: var(--gray-mid); border-radius: 12px; border: 1px solid var(--gray-border);">
+                <h4 style="margin-bottom: 0.5rem; color: var(--white);"><i class="fas fa-align-left"></i> شرح الدرس:</h4>
+                <p style="color: var(--gray-text); line-height: 1.7;">${escapeHtml(tutorial.content)}</p>
+            </div>
+        `;
+    }
+    
+    let stepsHtml = '';
+    if (tutorial.steps && tutorial.steps.length > 0) {
+        stepsHtml = `
+            <div style="margin: 1rem 0;">
+                <h4 style="margin-bottom: 1rem; color: var(--white);"><i class="fas fa-list-ol"></i> خطوات الشرح:</h4>
+                ${tutorial.steps.map((s, index) => `
+                    <div class="step-card">
+                        <div class="step-num"><i class="fas fa-chevron-left"></i> الخطوة ${index + 1}</div>
+                        <p class="step-text-view">${escapeHtml(s.text)}</p>
+                        ${s.img ? `<img src="${s.img}" alt="خطوة ${index + 1}" class="step-img-view">` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    let adminDeleteHtml = '';
+    if (isAdmin) {
+        adminDeleteHtml = `
+            <button class="delete-tutorial-btn-inside" data-id="${tutorial.id}" data-title="${escapeHtml(tutorial.title)}">
+                <i class="fas fa-trash"></i> حذف الدرس
+            </button>
+        `;
+    }
+    
+    content.innerHTML = videoHtml + descriptionHtml + stepsHtml + adminDeleteHtml;
     modal.classList.add('open');
-}
-
-function renderSteps(steps) {
-    if (!steps || steps.length === 0) return '<p style="color:var(--gray-text)">لا توجد خطوات لهذا الدرس</p>';
-    return steps.map((s, index) => `
-        <div class="step-card">
-            <div class="step-num"><i class="fas fa-chevron-left"></i> الخطوة ${index + 1}</div>
-            <p class="step-text-view">${escapeHtml(s.text)}</p>
-            ${s.img ? `<img src="${s.img}" alt="خطوة ${index + 1}" class="step-img-view">` : ''}
-        </div>
-    `).join('');
+    
+    if (isAdmin) {
+        const deleteBtn = content.querySelector('.delete-tutorial-btn-inside');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                const id = deleteBtn.dataset.id;
+                const title = deleteBtn.dataset.title;
+                openConfirmDeleteModal(id, title);
+            });
+        }
+    }
 }
 
 function initAdminModal() {
@@ -369,63 +400,74 @@ async function loadVisitorLogs() {
     `).join('');
 }
 
-function initDeleteModal() {
-    const modal = document.getElementById('deleteModal');
-    const closeBtn = document.getElementById('closeDeleteBtn');
-    const cancelBtn = document.getElementById('cancelDeleteBtn');
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => closeDeleteModal());
-    }
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => closeDeleteModal());
-    }
+function initConfirmDeleteModal() {
+    const modal = document.getElementById('confirmDeleteModal');
+    const closeBtn = document.getElementById('closeConfirmDeleteBtn');
+    const cancelBtn = document.getElementById('cancelConfirmDeleteBtn');
+    const executeBtn = document.getElementById('executeDeleteBtn');
+    const input = document.getElementById('confirmDeleteInput');
+    
+    if (closeBtn) closeBtn.addEventListener('click', () => closeConfirmDeleteModal());
+    if (cancelBtn) cancelBtn.addEventListener('click', () => closeConfirmDeleteModal());
     if (modal) {
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeDeleteModal();
+            if (e.target === modal) closeConfirmDeleteModal();
         });
     }
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', async () => {
-            if (!deleteTutorialId) return;
-            
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحذف...';
-            
-            const { error } = await db
-                .from('tutorials')
-                .delete()
-                .eq('id', deleteTutorialId);
-            
-            if (error) {
-                alert('حدث خطأ في الحذف: ' + error.message);
-                confirmBtn.disabled = false;
-                confirmBtn.innerHTML = 'حذف';
-                return;
+    if (executeBtn) {
+        executeBtn.addEventListener('click', () => executeDelete());
+    }
+    if (input) {
+        input.addEventListener('input', function() {
+            const deleteBtn = document.getElementById('executeDeleteBtn');
+            if (deleteBtn) {
+                deleteBtn.disabled = this.value.trim() !== 'ايوه';
             }
-            
-            closeDeleteModal();
-            await fetchTutorials();
-            
-            confirmBtn.disabled = false;
-            confirmBtn.innerHTML = 'حذف';
         });
     }
 }
 
-function openDeleteModal(id, title) {
-    deleteTutorialId = id;
-    const modal = document.getElementById('deleteModal');
-    const titleEl = document.getElementById('deleteTitleText');
-    if (titleEl) titleEl.textContent = `"${title}"`;
+function openConfirmDeleteModal(id, title) {
+    pendingDeleteId = id;
+    const modal = document.getElementById('confirmDeleteModal');
+    const input = document.getElementById('confirmDeleteInput');
+    const deleteBtn = document.getElementById('executeDeleteBtn');
+    
+    if (input) input.value = '';
+    if (deleteBtn) deleteBtn.disabled = true;
     if (modal) modal.classList.add('open');
 }
 
-function closeDeleteModal() {
-    const modal = document.getElementById('deleteModal');
+function closeConfirmDeleteModal() {
+    const modal = document.getElementById('confirmDeleteModal');
     if (modal) modal.classList.remove('open');
-    deleteTutorialId = null;
+    pendingDeleteId = null;
+}
+
+async function executeDelete() {
+    if (!pendingDeleteId) return;
+    
+    const deleteBtn = document.getElementById('executeDeleteBtn');
+    deleteBtn.disabled = true;
+    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحذف...';
+    
+    const { error } = await db
+        .from('tutorials')
+        .delete()
+        .eq('id', pendingDeleteId);
+    
+    if (error) {
+        alert('حدث خطأ في الحذف: ' + error.message);
+        deleteBtn.disabled = false;
+        deleteBtn.innerHTML = 'حذف';
+        return;
+    }
+    
+    closeConfirmDeleteModal();
+    await fetchTutorials();
+    
+    const stepsModal = document.getElementById('stepsModal');
+    if (stepsModal) stepsModal.classList.remove('open');
 }
 
 function initNav() {
