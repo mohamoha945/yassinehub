@@ -5,7 +5,7 @@
 // ---- SUPABASE CONFIG ----
 // غيّر هذين السطرين ببياناتك من: Supabase → Settings → API
 const SUPABASE_URL      = 'https://hdwmfckgxhpbkwsfsdma.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkd21mY2tneGhwYmt3c2ZzZG1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MjQ3OTYsImV4cCI6MjA5MDQwMDc5Nn0.oeqVQvJsPoNjUPSoMrXiPLO3fg-M5-rXZYIKd2xO7c4';
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
