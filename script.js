@@ -9,9 +9,6 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
  
-// ── ADMIN ────────────────────────────────────────
-const ADMIN_EMAIL = 'yacine.admin@yacinehub.local';
- 
 // ── LOAD ─────────────────────────────────────────
 // جلب الدروس مباشرة عند تحميل الصفحة
 window.addEventListener('load', async () => {
@@ -47,11 +44,18 @@ function openLesson(lessonId) {
 	window.location.href = `lesson.html?id=${lessonId}`;
 }
  
-// ── ADMIN ─────────────────────────────────────────
-async function checkAdmin() {
-	const { data: { user } } = await sb.auth.getUser();
-	if (user && user.email === ADMIN_EMAIL) {
-		document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
-	}
-}
+// ── فحص الأدمن عبر الرابط السري ──────────────────
+window.addEventListener('load', () => {
+	// نجلب ما مكتوب في الرابط بعد علامة الاستفهام
+	const urlParams = new URLSearchParams(window.location.search);
  
+	// إذا كتبت في الرابط ?mode=admin
+	if (urlParams.get('mode') === 'admin') {
+		// نبحث عن كل شيء مخصص للأدمن ونظهره
+		document.querySelectorAll('.admin-only').forEach(el => {
+			el.style.display = 'block';
+		});
+		console.log("تم تفعيل وضع الأدمن بنجاح ✅");
+	}
+});
+  
