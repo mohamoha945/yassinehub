@@ -766,3 +766,60 @@ section { padding: 7rem 0; }
     .btn { width: 100%; justify-content: center; }
     .help-form-wrap { padding: 1.5rem; }
 }
+
+/* ---- STEPS INPUT (Admin Modal) ---- */
+.step-input {
+    border: 1px solid var(--gray-border);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    background: var(--gray-mid);
+}
+.step-input .step-label {
+    display: block;
+    color: var(--gray-text);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    margin-bottom: 6px;
+}
+.step-input .step-text,
+.step-input .step-img {
+    margin-top: 6px;
+}
+
+/* ---- STEPS VIEWER MODAL ---- */
+.steps-modal {
+    max-width: 600px;
+}
+.step-card {
+    background: var(--gray-mid);
+    border: 1px solid var(--gray-border);
+    border-radius: 12px;
+    padding: 1.4rem;
+    margin-bottom: 1.2rem;
+    transition: border-color 0.2s;
+}
+.step-card:hover {
+    border-color: rgba(255,255,255,0.2);
+}
+.step-num {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--gray-text);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.step-text-view {
+    font-size: 0.98rem;
+    color: var(--white);
+    line-height: 1.7;
+}
+.step-img-view {
+    width: 100%;
+    border-radius: 10px;
+    margin-top: 0.8rem;
+    border: 1px solid var(--gray-border);
+}
