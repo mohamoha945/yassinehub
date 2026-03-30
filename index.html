@@ -227,6 +227,13 @@
                 <label>رابط الفيديو (اختياري)</label>
                 <input type="url" id="newVideo" placeholder="https://youtube.com/...">
             </div>
+            <div class="form-group">
+                <label>خطوات الشرح</label>
+                <div id="stepsContainer"></div>
+                <button type="button" class="btn btn-outline" id="addStepBtn" style="margin-top:10px; font-size: 0.8rem; padding: 0.5rem 1rem;">
+                    <i class="fas fa-plus"></i> إضافة خطوة جديدة
+                </button>
+            </div>
             <button class="btn btn-primary full-width" id="saveTutorialBtn">
                 <i class="fas fa-save"></i> حفظ الدرس
             </button>
@@ -236,6 +243,15 @@
                 <h4 style="margin-bottom:0.8rem;font-size:0.9rem;color:var(--gray-text);">سجل الأجهزة التي دخلت</h4>
                 <ul id="visitorList" style="font-family:var(--font-mono);font-size:0.7rem;color:var(--gray-text);max-height:200px;overflow-y:auto;"></ul>
             </div>
+        </div>
+    </div>
+
+    <!-- STEPS VIEWER MODAL -->
+    <div class="modal-overlay" id="stepsModal">
+        <div class="modal steps-modal">
+            <button class="modal-close" id="closeStepsBtn"><i class="fas fa-times"></i></button>
+            <h3 class="modal-title" id="stepsModalTitle"></h3>
+            <div id="stepsContent"></div>
         </div>
     </div>
 
