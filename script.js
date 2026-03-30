@@ -4,7 +4,7 @@
 
 // ── SUPABASE CONFIG ──────────────────────────────
 const SUPABASE_URL  = 'https://ztwdojobjpsaoecszcbf.supabase.co';
-const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0d2Rvam9ianBzYW9lY3N6Y2JmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MjY5MjYsImV4cCI6MjA5MDQwMjkyNn0.JyncU-OXv8c51yxyfns-0uoBTWDMXWnJXGfKYJwuNHc';
 
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
