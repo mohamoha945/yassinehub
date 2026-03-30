@@ -8,11 +8,12 @@ const SUPABASE_URL      = 'https://hdwmfckgxhpbkwsfsdma.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkd21mY2tneGhwYmt3c2ZzZG1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MjQ3OTYsImV4cCI6MjA5MDQwMDc5Nn0.oeqVQvJsPoNjUPSoMrXiPLO3fg-M5-rXZYIKd2xO7c4';
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+ 
 // ---- STATE ----
 let tutorials     = [];
 let currentFilter = 'all';
-
+let stepCount     = 0;
+ 
 // ---- INIT ----
 document.addEventListener('DOMContentLoaded', async () => {
     initNav();
@@ -20,16 +21,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     initFilters();
     initHelpForm();
     initAdminModal();
+    initStepsModal();
     initScrollReveal();
-
+ 
     await checkAccess();
     await fetchTutorials();
 });
-
+ 
 /* ================================================
    1. DEVICE ID + ADMIN CHECK
    ================================================ */
-
+ 
 function getDeviceId() {
     let id = localStorage.getItem('yacine_device_id');
     if (!id) {
@@ -38,23 +40,23 @@ function getDeviceId() {
     }
     return id;
 }
-
+ 
 async function checkAccess() {
     const deviceId = getDeviceId();
-
+ 
     // سجّل الزيارة
     await db.from('site_visitors').upsert(
         { device_id: deviceId, last_visit: new Date().toISOString() },
         { onConflict: 'device_id' }
     );
-
+ 
     // تحقق هل هذا الجهاز آدمن؟
     const { data: adminData } = await db
         .from('admin_devices')
         .select('device_id')
         .eq('device_id', deviceId)
         .single();
-
+ 
     if (adminData) {
         document.body.classList.add('is-admin');
         showAdminElements();
@@ -63,54 +65,54 @@ async function checkAccess() {
         hideAdminElements();
     }
 }
-
+ 
 function showAdminElements() {
     const btn = document.getElementById('openAdminBtn');
     if (btn) btn.style.display = 'inline-flex';
 }
-
+ 
 function hideAdminElements() {
     const btn = document.getElementById('openAdminBtn');
     if (btn) btn.style.display = 'none';
 }
-
+ 
 /* ================================================
    2. FETCH TUTORIALS FROM SUPABASE
    ================================================ */
-
+ 
 async function fetchTutorials() {
     const grid = document.getElementById('tutorialsGrid');
     grid.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;opacity:0.4"></i></div>`;
-
+ 
     const { data, error } = await db
         .from('tutorials')
         .select('*')
         .order('created_at', { ascending: false });
-
+ 
     if (error) {
         console.error('Supabase error:', error);
         grid.innerHTML = `<div class="empty-state">تعذّر تحميل الدروس، تحقق من الاتصال</div>`;
         return;
     }
-
+ 
     tutorials = data || [];
     renderTutorials(currentFilter);
 }
-
+ 
 /* ================================================
    3. NAV
    ================================================ */
-
+ 
 function initNav() {
     const toggle     = document.getElementById('navToggle');
     const mobileMenu = document.getElementById('navMobile');
-
+ 
     toggle.addEventListener('click', () => mobileMenu.classList.toggle('open'));
-
+ 
     document.querySelectorAll('.mobile-link').forEach(link =>
         link.addEventListener('click', () => mobileMenu.classList.remove('open'))
     );
-
+ 
     window.addEventListener('scroll', () => {
         const nav = document.getElementById('nav');
         nav.style.borderBottomColor = window.scrollY > 50
@@ -118,11 +120,11 @@ function initNav() {
             : 'var(--gray-border)';
     });
 }
-
+ 
 /* ================================================
    4. COUNTERS
    ================================================ */
-
+ 
 function initCounters() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -132,16 +134,16 @@ function initCounters() {
             }
         });
     }, { threshold: 0.5 });
-
+ 
     document.querySelectorAll('.stat-num').forEach(c => observer.observe(c));
 }
-
+ 
 function animateCounter(el) {
     const target   = parseInt(el.dataset.target);
     const duration = 1500;
     const step     = target / (duration / 16);
     let current    = 0;
-
+ 
     const timer = setInterval(() => {
         current += step;
         if (current >= target) {
@@ -152,17 +154,17 @@ function animateCounter(el) {
         }
     }, 16);
 }
-
+ 
 /* ================================================
    5. RENDER TUTORIALS
    ================================================ */
-
+ 
 function renderTutorials(filter = 'all') {
     const grid     = document.getElementById('tutorialsGrid');
     const filtered = filter === 'all'
         ? tutorials
         : tutorials.filter(t => t.category === filter);
-
+ 
     if (filtered.length === 0) {
         grid.innerHTML = `<div class="empty-state">
             <i class="fas fa-folder-open" style="font-size:2rem;margin-bottom:1rem;display:block;opacity:0.3"></i>
@@ -170,7 +172,7 @@ function renderTutorials(filter = 'all') {
         </div>`;
         return;
     }
-
+ 
     grid.innerHTML = filtered.map(t => `
         <div class="tutorial-card" data-id="${t.id}">
             <div class="card-cat">${getCatIcon(t.category)} ${t.category}</div>
@@ -185,9 +187,15 @@ function renderTutorials(filter = 'all') {
                     : `<span class="card-video-link" style="opacity:0.3"><i class="fas fa-file-alt"></i> نصي فقط</span>`
                 }
             </div>
+            ${t.steps && t.steps.length > 0
+                ? `<button class="btn btn-outline view-steps-btn" style="width:100%;margin-top:1rem;font-size:0.85rem;justify-content:center;" data-id="${t.id}">
+                    <i class="fas fa-list-ol"></i> عرض الخطوات (${t.steps.length})
+                   </button>`
+                : ''
+            }
         </div>
     `).join('');
-
+ 
     grid.querySelectorAll('.tutorial-card').forEach((card, i) => {
         card.style.opacity   = '0';
         card.style.transform = 'translateY(20px)';
@@ -197,8 +205,17 @@ function renderTutorials(filter = 'all') {
             card.style.transform  = 'translateY(0)';
         }, i * 80);
     });
+ 
+    grid.querySelectorAll('.view-steps-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id       = btn.dataset.id;
+            const tutorial = tutorials.find(t => String(t.id) === String(id));
+            if (tutorial) openStepsModal(tutorial);
+        });
+    });
 }
-
+ 
 function getCatIcon(cat) {
     const icons = {
         Community : '<i class="fas fa-users"></i>',
@@ -208,17 +225,17 @@ function getCatIcon(cat) {
     };
     return icons[cat] || '<i class="fas fa-book"></i>';
 }
-
+ 
 function formatDate(dateStr) {
     return new Date(dateStr).toLocaleDateString('ar-SA', {
         year: 'numeric', month: 'short', day: 'numeric'
     });
 }
-
+ 
 /* ================================================
    6. FILTERS
    ================================================ */
-
+ 
 function initFilters() {
     const btns = document.querySelectorAll('.filter-btn');
     btns.forEach(btn => {
@@ -230,23 +247,23 @@ function initFilters() {
         });
     });
 }
-
+ 
 /* ================================================
    7. HELP FORM → SUPABASE
    ================================================ */
-
+ 
 function initHelpForm() {
     const form = document.getElementById('helpForm');
     const msg  = document.getElementById('formMessage');
-
+ 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-
+ 
         const name    = document.getElementById('visitorName').value.trim();
         const discord = document.getElementById('visitorDiscord').value.trim();
         const details = document.getElementById('requestDetails').value.trim();
         const nsfw    = document.getElementById('nsfwCheck').checked;
-
+ 
         if (!name || !details) {
             showMsg(msg, 'يرجى ملء جميع الحقول المطلوبة', 'error');
             return;
@@ -255,41 +272,41 @@ function initHelpForm() {
             showMsg(msg, 'يجب التأكيد بأن السيرفر Not NSFW', 'error');
             return;
         }
-
+ 
         const btn = document.getElementById('submitBtn');
         btn.disabled  = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
-
+ 
         const { error } = await db.from('help_requests').insert([{
             visitor_name    : name,
             visitor_discord : discord,
             request_details : details,
             is_nsfw         : false
         }]);
-
+ 
         if (error) {
             showMsg(msg, 'حدث خطأ، حاول مرة ثانية', 'error');
             btn.disabled  = false;
             btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
             return;
         }
-
+ 
         form.reset();
         btn.innerHTML        = '<i class="fas fa-check"></i> تم الإرسال!';
         btn.style.background = '#4ade80';
         btn.style.color      = '#000';
-
+ 
         setTimeout(() => {
             btn.innerHTML        = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
             btn.style.background = '';
             btn.style.color      = '';
             btn.disabled         = false;
         }, 3000);
-
+ 
         showMsg(msg, '✅ تم إرسال طلبك! سيتواصل معك ياسين على الديسكورد قريباً.', 'success');
     });
 }
-
+ 
 function showMsg(el, text, type) {
     el.textContent = text;
     el.className   = `form-message ${type}`;
@@ -298,60 +315,82 @@ function showMsg(el, text, type) {
         el.textContent = '';
     }, 5000);
 }
-
+ 
 /* ================================================
    8. ADMIN MODAL → SAVE TO SUPABASE
    ================================================ */
-
+ 
 function initAdminModal() {
     const openBtn  = document.getElementById('openAdminBtn');
     const closeBtn = document.getElementById('closeAdminBtn');
     const modal    = document.getElementById('adminModal');
     const saveBtn  = document.getElementById('saveTutorialBtn');
-
+ 
     openBtn.addEventListener('click', () => {
         modal.classList.add('open');
         if (document.body.classList.contains('is-admin')) {
             loadVisitorLogs();
         }
     });
-    closeBtn.addEventListener('click', () => modal.classList.remove('open'));
+    closeBtn.addEventListener('click', () => { modal.classList.remove('open'); resetSteps(); });
     modal.addEventListener('click', e => {
-        if (e.target === modal) modal.classList.remove('open');
+        if (e.target === modal) { modal.classList.remove('open'); resetSteps(); }
     });
-
+ 
+    // إضافة خطوة جديدة
+    document.getElementById('addStepBtn').addEventListener('click', () => {
+        stepCount++;
+        const container = document.getElementById('stepsContainer');
+        const stepHtml  = `
+            <div class="step-input">
+                <small class="step-label">الخطوة ${stepCount}</small>
+                <input type="text" placeholder="عنوان الخطوة أو وصف سريع" class="step-text">
+                <input type="url"  placeholder="رابط صورة الخطوة (اختياري)" class="step-img">
+            </div>`;
+        container.insertAdjacentHTML('beforeend', stepHtml);
+    });
+ 
     saveBtn.addEventListener('click', async () => {
         const title    = document.getElementById('newTitle').value.trim();
         const category = document.getElementById('newCategory').value;
         const content  = document.getElementById('newContent').value.trim();
         const video    = document.getElementById('newVideo').value.trim();
-
+ 
         if (!title || !content) {
             alert('يرجى ملء العنوان والمحتوى');
             return;
         }
-
+ 
+        // جمع الخطوات
+        const stepElements = document.querySelectorAll('.step-input');
+        const steps = Array.from(stepElements).map(el => ({
+            text : el.querySelector('.step-text').value.trim(),
+            img  : el.querySelector('.step-img').value.trim()
+        })).filter(s => s.text);
+ 
         saveBtn.disabled  = true;
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
-
+ 
         const { error } = await db.from('tutorials').insert([{
             title,
             category,
             content,
-            video_url: video || null
+            video_url : video || null,
+            steps     : steps.length > 0 ? steps : null
         }]);
-
+ 
         if (error) {
             alert('حدث خطأ: ' + error.message);
             saveBtn.disabled  = false;
             saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الدرس';
             return;
         }
-
+ 
         document.getElementById('newTitle').value   = '';
         document.getElementById('newContent').value = '';
         document.getElementById('newVideo').value   = '';
-
+        resetSteps();
+ 
         saveBtn.innerHTML = '<i class="fas fa-check"></i> تم الحفظ!';
         setTimeout(async () => {
             modal.classList.remove('open');
@@ -361,28 +400,68 @@ function initAdminModal() {
         }, 1200);
     });
 }
-
+ 
+function resetSteps() {
+    stepCount = 0;
+    const container = document.getElementById('stepsContainer');
+    if (container) container.innerHTML = '';
+}
+ 
+/* ================================================
+   8b. STEPS VIEWER MODAL
+   ================================================ */
+ 
+function initStepsModal() {
+    const modal    = document.getElementById('stepsModal');
+    const closeBtn = document.getElementById('closeStepsBtn');
+    closeBtn.addEventListener('click', () => modal.classList.remove('open'));
+    modal.addEventListener('click', e => {
+        if (e.target === modal) modal.classList.remove('open');
+    });
+}
+ 
+function openStepsModal(tutorial) {
+    const modal   = document.getElementById('stepsModal');
+    const title   = document.getElementById('stepsModalTitle');
+    const content = document.getElementById('stepsContent');
+ 
+    title.textContent = tutorial.title;
+    content.innerHTML = renderSteps(tutorial.steps);
+    modal.classList.add('open');
+}
+ 
+function renderSteps(steps) {
+    if (!steps || steps.length === 0) return '<p style="color:var(--gray-text)">لا توجد خطوات لهذا الدرس</p>';
+    return steps.map((s, index) => `
+        <div class="step-card">
+            <div class="step-num"><i class="fas fa-chevron-left"></i> الخطوة ${index + 1}</div>
+            <p class="step-text-view">${s.text}</p>
+            ${s.img ? `<img src="${s.img}" alt="خطوة ${index + 1}" class="step-img-view">` : ''}
+        </div>
+    `).join('');
+}
+ 
 /* ================================================
    9. VISITOR LOGS (Admin only)
    ================================================ */
-
+ 
 async function loadVisitorLogs() {
     const logDiv = document.getElementById('visitorLog');
     const list   = document.getElementById('visitorList');
     if (!logDiv || !list) return;
-
+ 
     logDiv.style.display = 'block';
-
+ 
     const { data } = await db
         .from('site_visitors')
         .select('*')
         .order('last_visit', { ascending: false });
-
+ 
     if (!data || data.length === 0) {
         list.innerHTML = '<li style="color:var(--gray-text)">لا يوجد زوار بعد</li>';
         return;
     }
-
+ 
     list.innerHTML = data.map(v => `
         <li style="margin-bottom:5px;border-bottom:1px solid #222;padding-bottom:4px">
             <span style="opacity:0.5">ID:</span> ${v.device_id}
@@ -392,11 +471,11 @@ async function loadVisitorLogs() {
         </li>
     `).join('');
 }
-
+ 
 /* ================================================
    10. SCROLL REVEAL
    ================================================ */
-
+ 
 function initScrollReveal() {
     const targets  = document.querySelectorAll('.section-title, .about-bio, .help-rules, .section-sub');
     const observer = new IntersectionObserver((entries) => {
@@ -408,7 +487,7 @@ function initScrollReveal() {
             }
         });
     }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-
+ 
     targets.forEach(el => {
         el.style.opacity    = '0';
         el.style.transform  = 'translateY(24px)';
@@ -416,3 +495,4 @@ function initScrollReveal() {
         observer.observe(el);
     });
 }
+ 
