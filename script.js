@@ -9,12 +9,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ---- STATE ----
-let tutorials     = [];
+let tutorials = [];
 let currentFilter = 'all';
-let stepCount     = 0;
+let stepCount = 0;
+let deleteTutorialId = null;
 
-// ---- INIT ----
 document.addEventListener('DOMContentLoaded', async () => {
     initNav();
     initCounters();
@@ -23,14 +22,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     initAdminModal();
     initStepsModal();
     initScrollReveal();
+    initDeleteModal();
 
     await checkAccess();
     await fetchTutorials();
 });
-
-/* ================================================
-   1. DEVICE ID + ADMIN CHECK
-   ================================================ */
 
 function getDeviceId() {
     let id = localStorage.getItem('yacine_device_id');
@@ -43,14 +39,11 @@ function getDeviceId() {
 
 async function checkAccess() {
     const deviceId = getDeviceId();
-
-    // سجّل الزيارة
     await db.from('site_visitors').upsert(
         { device_id: deviceId, last_visit: new Date().toISOString() },
         { onConflict: 'device_id' }
     );
 
-    // تحقق هل هذا الجهاز آدمن؟
     const { data: adminData } = await db
         .from('admin_devices')
         .select('device_id')
@@ -76,10 +69,6 @@ function hideAdminElements() {
     if (btn) btn.style.display = 'none';
 }
 
-/* ================================================
-   2. FETCH TUTORIALS FROM SUPABASE
-   ================================================ */
-
 async function fetchTutorials() {
     const grid = document.getElementById('tutorialsGrid');
     grid.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;opacity:0.4"></i></div>`;
@@ -99,12 +88,21 @@ async function fetchTutorials() {
     renderTutorials(currentFilter);
 }
 
-/* ================================================
-   3. RENDER TUTORIALS (مع إصلاح فتح الدرس)
-   ================================================ */
+function getYoutubeEmbedUrl(url) {
+    if (!url) return '';
+    let videoId = '';
+    if (url.includes('youtu.be/')) {
+        videoId = url.split('youtu.be/')[1]?.split('?')[0];
+    } else if (url.includes('youtube.com/watch')) {
+        videoId = url.split('v=')[1]?.split('&')[0];
+    } else if (url.includes('youtube.com/embed/')) {
+        videoId = url.split('embed/')[1]?.split('?')[0];
+    }
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+}
 
 function renderTutorials(filter = 'all') {
-    const grid     = document.getElementById('tutorialsGrid');
+    const grid = document.getElementById('tutorialsGrid');
     const filtered = filter === 'all'
         ? tutorials
         : tutorials.filter(t => t.category === filter);
@@ -117,16 +115,23 @@ function renderTutorials(filter = 'all') {
         return;
     }
 
+    const isAdmin = document.body.classList.contains('is-admin');
+
     grid.innerHTML = filtered.map(t => `
         <div class="tutorial-card" data-id="${t.id}">
             <div class="card-cat">${getCatIcon(t.category)} ${t.category}</div>
-            <div class="card-title">${t.title}</div>
-            <div class="card-content">${t.content}</div>
+            <div class="card-title">${escapeHtml(t.title)}</div>
+            <div class="card-content">${escapeHtml(t.content)}</div>
+            ${t.video_url ? `
+                <div class="video-wrapper">
+                    <iframe src="${getYoutubeEmbedUrl(t.video_url)}" frameborder="0" allowfullscreen></iframe>
+                </div>
+            ` : ''}
             <div class="card-footer">
                 <span class="card-date">${formatDate(t.created_at)}</span>
                 ${t.video_url
                     ? `<a href="${t.video_url}" target="_blank" class="card-video-link">
-                        <i class="fab fa-youtube"></i> مشاهدة الفيديو
+                        <i class="fab fa-youtube"></i> فتح الفيديو
                        </a>`
                     : `<span class="card-video-link" style="opacity:0.3"><i class="fas fa-file-alt"></i> نصي فقط</span>`
                 }
@@ -137,22 +142,25 @@ function renderTutorials(filter = 'all') {
                    </button>`
                 : ''
             }
+            ${isAdmin ? `
+                <button class="delete-tutorial-btn" data-id="${t.id}" data-title="${escapeHtml(t.title)}">
+                    <i class="fas fa-trash"></i> حذف الدرس
+                </button>
+            ` : ''}
         </div>
     `).join('');
 
     grid.querySelectorAll('.tutorial-card').forEach((card, i) => {
-        card.style.opacity   = '0';
+        card.style.opacity = '0';
         card.style.transform = 'translateY(20px)';
         setTimeout(() => {
             card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-            card.style.opacity    = '1';
-            card.style.transform  = 'translateY(0)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
         }, i * 80);
-        
-        // إضافة حدث النقر على البطاقة بأكملها
+
         card.addEventListener('click', (e) => {
-            // منع فتح النافذة إذا كان المستخدم ضغط على رابط الفيديو أو زر عرض الخطوات
-            if (e.target.closest('.card-video-link') || e.target.closest('.view-steps-btn')) {
+            if (e.target.closest('.card-video-link') || e.target.closest('.view-steps-btn') || e.target.closest('.delete-tutorial-btn')) {
                 return;
             }
             const id = card.dataset.id;
@@ -164,19 +172,38 @@ function renderTutorials(filter = 'all') {
     grid.querySelectorAll('.view-steps-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const id       = btn.dataset.id;
+            const id = btn.dataset.id;
             const tutorial = tutorials.find(t => String(t.id) === String(id));
             if (tutorial) openStepsModal(tutorial);
         });
+    });
+
+    grid.querySelectorAll('.delete-tutorial-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            const title = btn.dataset.title;
+            openDeleteModal(id, title);
+        });
+    });
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
     });
 }
 
 function getCatIcon(cat) {
     const icons = {
-        Community : '<i class="fas fa-users"></i>',
-        Roles     : '<i class="fas fa-shield-alt"></i>',
-        Bots      : '<i class="fas fa-robot"></i>',
-        Design    : '<i class="fas fa-palette"></i>'
+        Community: '<i class="fas fa-users"></i>',
+        Roles: '<i class="fas fa-shield-alt"></i>',
+        Bots: '<i class="fas fa-robot"></i>',
+        Design: '<i class="fas fa-palette"></i>'
     };
     return icons[cat] || '<i class="fas fa-book"></i>';
 }
@@ -187,12 +214,8 @@ function formatDate(dateStr) {
     });
 }
 
-/* ================================================
-   4. STEPS VIEWER MODAL
-   ================================================ */
-
 function initStepsModal() {
-    const modal    = document.getElementById('stepsModal');
+    const modal = document.getElementById('stepsModal');
     const closeBtn = document.getElementById('closeStepsBtn');
     closeBtn.addEventListener('click', () => modal.classList.remove('open'));
     modal.addEventListener('click', e => {
@@ -201,8 +224,8 @@ function initStepsModal() {
 }
 
 function openStepsModal(tutorial) {
-    const modal   = document.getElementById('stepsModal');
-    const title   = document.getElementById('stepsModalTitle');
+    const modal = document.getElementById('stepsModal');
+    const title = document.getElementById('stepsModalTitle');
     const content = document.getElementById('stepsContent');
 
     title.textContent = tutorial.title;
@@ -215,26 +238,21 @@ function renderSteps(steps) {
     return steps.map((s, index) => `
         <div class="step-card">
             <div class="step-num"><i class="fas fa-chevron-left"></i> الخطوة ${index + 1}</div>
-            <p class="step-text-view">${s.text}</p>
+            <p class="step-text-view">${escapeHtml(s.text)}</p>
             ${s.img ? `<img src="${s.img}" alt="خطوة ${index + 1}" class="step-img-view">` : ''}
         </div>
     `).join('');
 }
 
-/* ================================================
-   5. ADMIN MODAL (مع إصلاح زر إضافة خطوة)
-   ================================================ */
-
 function initAdminModal() {
-    const openBtn  = document.getElementById('openAdminBtn');
+    const openBtn = document.getElementById('openAdminBtn');
     const closeBtn = document.getElementById('closeAdminBtn');
-    const modal    = document.getElementById('adminModal');
-    const saveBtn  = document.getElementById('saveTutorialBtn');
+    const modal = document.getElementById('adminModal');
+    const saveBtn = document.getElementById('saveTutorialBtn');
     const addStepBtn = document.getElementById('addStepBtn');
     const stepsContainer = document.getElementById('stepsContainer');
 
     openBtn.addEventListener('click', () => {
-        // تصفير الخطوات عند فتح النافذة
         stepCount = 0;
         if (stepsContainer) stepsContainer.innerHTML = '';
         modal.classList.add('open');
@@ -242,20 +260,19 @@ function initAdminModal() {
             loadVisitorLogs();
         }
     });
-    
-    closeBtn.addEventListener('click', () => { 
-        modal.classList.remove('open'); 
-        resetSteps(); 
+
+    closeBtn.addEventListener('click', () => {
+        modal.classList.remove('open');
+        resetSteps();
     });
-    
+
     modal.addEventListener('click', e => {
-        if (e.target === modal) { 
-            modal.classList.remove('open'); 
-            resetSteps(); 
+        if (e.target === modal) {
+            modal.classList.remove('open');
+            resetSteps();
         }
     });
 
-    // إصلاح مشكلة عدم استجابة زر إضافة خطوة
     if (addStepBtn) {
         addStepBtn.onclick = () => {
             stepCount++;
@@ -263,58 +280,57 @@ function initAdminModal() {
                 <div class="step-input">
                     <small class="step-label">الخطوة ${stepCount}</small>
                     <input type="text" placeholder="عنوان الخطوة أو وصف سريع" class="step-text">
-                    <input type="url"  placeholder="رابط صورة الخطوة (اختياري)" class="step-img">
+                    <input type="url" placeholder="رابط صورة الخطوة (اختياري)" class="step-img">
                 </div>`;
             stepsContainer.insertAdjacentHTML('beforeend', stepHtml);
         };
     }
 
     saveBtn.addEventListener('click', async () => {
-        const title    = document.getElementById('newTitle').value.trim();
+        const title = document.getElementById('newTitle').value.trim();
         const category = document.getElementById('newCategory').value;
-        const content  = document.getElementById('newContent').value.trim();
-        const video    = document.getElementById('newVideo').value.trim();
+        const content = document.getElementById('newContent').value.trim();
+        const video = document.getElementById('newVideo').value.trim();
 
         if (!title || !content) {
             alert('يرجى ملء العنوان والمحتوى');
             return;
         }
 
-        // جمع الخطوات
         const stepElements = document.querySelectorAll('.step-input');
         const steps = Array.from(stepElements).map(el => ({
-            text : el.querySelector('.step-text').value.trim(),
-            img  : el.querySelector('.step-img').value.trim()
+            text: el.querySelector('.step-text').value.trim(),
+            img: el.querySelector('.step-img').value.trim()
         })).filter(s => s.text);
 
-        saveBtn.disabled  = true;
+        saveBtn.disabled = true;
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
 
         const { error } = await db.from('tutorials').insert([{
             title,
             category,
             content,
-            video_url : video || null,
-            steps     : steps.length > 0 ? steps : null
+            video_url: video || null,
+            steps: steps.length > 0 ? steps : null
         }]);
 
         if (error) {
             alert('حدث خطأ: ' + error.message);
-            saveBtn.disabled  = false;
+            saveBtn.disabled = false;
             saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الدرس';
             return;
         }
 
-        document.getElementById('newTitle').value   = '';
+        document.getElementById('newTitle').value = '';
         document.getElementById('newContent').value = '';
-        document.getElementById('newVideo').value   = '';
+        document.getElementById('newVideo').value = '';
         resetSteps();
 
         saveBtn.innerHTML = '<i class="fas fa-check"></i> تم الحفظ!';
         setTimeout(async () => {
             modal.classList.remove('open');
             saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الدرس';
-            saveBtn.disabled  = false;
+            saveBtn.disabled = false;
             await fetchTutorials();
         }, 1200);
     });
@@ -326,13 +342,9 @@ function resetSteps() {
     if (container) container.innerHTML = '';
 }
 
-/* ================================================
-   6. VISITOR LOGS (Admin only)
-   ================================================ */
-
 async function loadVisitorLogs() {
     const logDiv = document.getElementById('visitorLog');
-    const list   = document.getElementById('visitorList');
+    const list = document.getElementById('visitorList');
     if (!logDiv || !list) return;
 
     logDiv.style.display = 'block';
@@ -357,12 +369,67 @@ async function loadVisitorLogs() {
     `).join('');
 }
 
-/* ================================================
-   7. NAV
-   ================================================ */
+function initDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    const closeBtn = document.getElementById('closeDeleteBtn');
+    const cancelBtn = document.getElementById('cancelDeleteBtn');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => closeDeleteModal());
+    }
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => closeDeleteModal());
+    }
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeDeleteModal();
+        });
+    }
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async () => {
+            if (!deleteTutorialId) return;
+            
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحذف...';
+            
+            const { error } = await db
+                .from('tutorials')
+                .delete()
+                .eq('id', deleteTutorialId);
+            
+            if (error) {
+                alert('حدث خطأ في الحذف: ' + error.message);
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = 'حذف';
+                return;
+            }
+            
+            closeDeleteModal();
+            await fetchTutorials();
+            
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = 'حذف';
+        });
+    }
+}
+
+function openDeleteModal(id, title) {
+    deleteTutorialId = id;
+    const modal = document.getElementById('deleteModal');
+    const titleEl = document.getElementById('deleteTitleText');
+    if (titleEl) titleEl.textContent = `"${title}"`;
+    if (modal) modal.classList.add('open');
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    if (modal) modal.classList.remove('open');
+    deleteTutorialId = null;
+}
 
 function initNav() {
-    const toggle     = document.getElementById('navToggle');
+    const toggle = document.getElementById('navToggle');
     const mobileMenu = document.getElementById('navMobile');
 
     toggle.addEventListener('click', () => mobileMenu.classList.toggle('open'));
@@ -379,10 +446,6 @@ function initNav() {
     });
 }
 
-/* ================================================
-   8. COUNTERS
-   ================================================ */
-
 function initCounters() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -397,10 +460,10 @@ function initCounters() {
 }
 
 function animateCounter(el) {
-    const target   = parseInt(el.dataset.target);
+    const target = parseInt(el.dataset.target);
     const duration = 1500;
-    const step     = target / (duration / 16);
-    let current    = 0;
+    const step = target / (duration / 16);
+    let current = 0;
 
     const timer = setInterval(() => {
         current += step;
@@ -412,10 +475,6 @@ function animateCounter(el) {
         }
     }, 16);
 }
-
-/* ================================================
-   9. FILTERS
-   ================================================ */
 
 function initFilters() {
     const btns = document.querySelectorAll('.filter-btn');
@@ -429,21 +488,17 @@ function initFilters() {
     });
 }
 
-/* ================================================
-   10. HELP FORM → SUPABASE
-   ================================================ */
-
 function initHelpForm() {
     const form = document.getElementById('helpForm');
-    const msg  = document.getElementById('formMessage');
+    const msg = document.getElementById('formMessage');
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const name    = document.getElementById('visitorName').value.trim();
+        const name = document.getElementById('visitorName').value.trim();
         const discord = document.getElementById('visitorDiscord').value.trim();
         const details = document.getElementById('requestDetails').value.trim();
-        const nsfw    = document.getElementById('nsfwCheck').checked;
+        const nsfw = document.getElementById('nsfwCheck').checked;
 
         if (!name || !details) {
             showMsg(msg, 'يرجى ملء جميع الحقول المطلوبة', 'error');
@@ -455,33 +510,33 @@ function initHelpForm() {
         }
 
         const btn = document.getElementById('submitBtn');
-        btn.disabled  = true;
+        btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
 
         const { error } = await db.from('help_requests').insert([{
-            visitor_name    : name,
-            visitor_discord : discord,
-            request_details : details,
-            is_nsfw         : false
+            visitor_name: name,
+            visitor_discord: discord,
+            request_details: details,
+            is_nsfw: false
         }]);
 
         if (error) {
             showMsg(msg, 'حدث خطأ، حاول مرة ثانية', 'error');
-            btn.disabled  = false;
+            btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
             return;
         }
 
         form.reset();
-        btn.innerHTML        = '<i class="fas fa-check"></i> تم الإرسال!';
+        btn.innerHTML = '<i class="fas fa-check"></i> تم الإرسال!';
         btn.style.background = '#4ade80';
-        btn.style.color      = '#000';
+        btn.style.color = '#000';
 
         setTimeout(() => {
-            btn.innerHTML        = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
             btn.style.background = '';
-            btn.style.color      = '';
-            btn.disabled         = false;
+            btn.style.color = '';
+            btn.disabled = false;
         }, 3000);
 
         showMsg(msg, '✅ تم إرسال طلبك! سيتواصل معك ياسين على الديسكورد قريباً.', 'success');
@@ -490,23 +545,19 @@ function initHelpForm() {
 
 function showMsg(el, text, type) {
     el.textContent = text;
-    el.className   = `form-message ${type}`;
+    el.className = `form-message ${type}`;
     setTimeout(() => {
-        el.className   = 'form-message';
+        el.className = 'form-message';
         el.textContent = '';
     }, 5000);
 }
 
-/* ================================================
-   11. SCROLL REVEAL
-   ================================================ */
-
 function initScrollReveal() {
-    const targets  = document.querySelectorAll('.section-title, .about-bio, .help-rules, .section-sub');
+    const targets = document.querySelectorAll('.section-title, .about-bio, .help-rules, .section-sub');
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                entry.target.style.opacity   = '1';
+                entry.target.style.opacity = '1';
                 entry.target.style.transform = 'translateY(0)';
                 observer.unobserve(entry.target);
             }
@@ -514,10 +565,9 @@ function initScrollReveal() {
     }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
     targets.forEach(el => {
-        el.style.opacity    = '0';
-        el.style.transform  = 'translateY(24px)';
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(24px)';
         el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
         observer.observe(el);
     });
 }
-
