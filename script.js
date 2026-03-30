@@ -13,6 +13,7 @@ let tutorials = [];
 let currentFilter = 'all';
 let stepCount = 0;
 let pendingDeleteId = null;
+let currentModalIframe = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     initNav();
@@ -120,6 +121,11 @@ function renderTutorials(filter = 'all') {
             <div class="card-cat">${getCatIcon(t.category)} ${t.category}</div>
             <div class="card-title">${escapeHtml(t.title)}</div>
             <div class="card-content">${escapeHtml(t.content)}</div>
+            ${t.video_url ? `
+                <div class="video-wrapper">
+                    <iframe src="${getYoutubeEmbedUrl(t.video_url)}" frameborder="0" allowfullscreen></iframe>
+                </div>
+            ` : ''}
             <div class="card-footer">
                 <span class="card-date">${formatDate(t.created_at)}</span>
                 ${t.video_url
@@ -196,10 +202,27 @@ function formatDate(dateStr) {
 function initStepsModal() {
     const modal = document.getElementById('stepsModal');
     const closeBtn = document.getElementById('closeStepsBtn');
-    closeBtn.addEventListener('click', () => modal.classList.remove('open'));
-    modal.addEventListener('click', e => {
-        if (e.target === modal) modal.classList.remove('open');
+    
+    closeBtn.addEventListener('click', () => {
+        stopVideoInModal();
+        modal.classList.remove('open');
     });
+    
+    modal.addEventListener('click', e => {
+        if (e.target === modal) {
+            stopVideoInModal();
+            modal.classList.remove('open');
+        }
+    });
+}
+
+function stopVideoInModal() {
+    if (currentModalIframe) {
+        const src = currentModalIframe.src;
+        currentModalIframe.src = '';
+        currentModalIframe.src = src;
+        currentModalIframe = null;
+    }
 }
 
 function openStepsModal(tutorial) {
@@ -211,11 +234,12 @@ function openStepsModal(tutorial) {
     title.textContent = tutorial.title;
     
     let videoHtml = '';
+    let videoId = 'modal-video-' + Date.now();
     if (tutorial.video_url) {
         const embedUrl = getYoutubeEmbedUrl(tutorial.video_url);
         videoHtml = `
-            <div class="video-container" style="margin: 1rem 0; border-radius: 12px; overflow: hidden;">
-                <iframe src="${embedUrl}" frameborder="0" allowfullscreen style="width:100%; height:300px; border-radius:12px;"></iframe>
+            <div class="video-container">
+                <iframe id="${videoId}" src="${embedUrl}" frameborder="0" allowfullscreen></iframe>
                 <div style="margin-top: 0.5rem; text-align: center;">
                     <a href="${tutorial.video_url}" target="_blank" class="btn btn-outline" style="font-size:0.8rem;">
                         <i class="fab fa-youtube"></i> فتح الفيديو على يوتيوب
@@ -262,6 +286,10 @@ function openStepsModal(tutorial) {
     
     content.innerHTML = videoHtml + descriptionHtml + stepsHtml + adminDeleteHtml;
     modal.classList.add('open');
+    
+    if (tutorial.video_url) {
+        currentModalIframe = document.getElementById(videoId);
+    }
     
     if (isAdmin) {
         const deleteBtn = content.querySelector('.delete-tutorial-btn-inside');
@@ -468,6 +496,7 @@ async function executeDelete() {
     
     const stepsModal = document.getElementById('stepsModal');
     if (stepsModal) stepsModal.classList.remove('open');
+    stopVideoInModal();
 }
 
 function initNav() {
