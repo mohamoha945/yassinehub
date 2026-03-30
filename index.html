@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>yacine_citys — خبير السيرفرات</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- NOISE OVERLAY -->
+    <div class="noise"></div>
+
+    <!-- NAV -->
+    <nav id="nav">
+        <div class="nav-inner">
+            <a href="#hero" class="nav-logo">yacine<span>_citys</span></a>
+            <ul class="nav-links">
+                <li><a href="#about">عني</a></li>
+                <li><a href="#tutorials">الدروس</a></li>
+                <li><a href="#help">مساعدة</a></li>
+            </ul>
+            <button class="nav-toggle" id="navToggle"><i class="fas fa-bars"></i></button>
+        </div>
+        <ul class="nav-mobile" id="navMobile">
+            <li><a href="#about" class="mobile-link">عني</a></li>
+            <li><a href="#tutorials" class="mobile-link">الدروس</a></li>
+            <li><a href="#help" class="mobile-link">مساعدة</a></li>
+        </ul>
+    </nav>
+
+    <!-- HERO -->
+    <section id="hero">
+        <div class="hero-bg">
+            <div class="grid-lines"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge">Discord Server Expert</div>
+            <h1 class="hero-title">
+                <span class="line1">يـاسين</span>
+                <span class="line2">YACINE</span>
+            </h1>
+            <p class="hero-sub">مختص في صناعة السيرفرات الأسطورية<br>ومساعدة المبتدئين على البناء من الصفر</p>
+            <div class="hero-actions">
+                <a href="#tutorials" class="btn btn-primary">ابدأ التعلم</a>
+                <a href="#help" class="btn btn-outline">اطلب مساعدة</a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-num" data-target="2">0</span><span>+</span>
+                    <span class="stat-label">سنوات خبرة</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-num" data-target="50">0</span><span>+</span>
+                    <span class="stat-label">سيرفر مكتمل</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-num" data-target="100">0</span><span>%</span>
+                    <span class="stat-label">not nsfw</span>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <span>scroll</span>
+            <div class="scroll-line"></div>
+        </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about">
+        <div class="container">
+            <div class="section-tag">01 / عني</div>
+            <div class="about-grid">
+                <div class="about-text">
+                    <h2 class="section-title">من أنا<span class="dot">.</span></h2>
+                    <p class="about-bio">
+                        أنا ياسين، عمري <strong>15 سنة</strong>، أحب الرسم والجيمنج بشكل خرافي.
+                        متخصص في مجال سيرفرات ديسكورد منذ أكثر من <strong>سنتين</strong>،
+                        وخلال هذه المدة ساعدت الكثير في بناء سيرفرات احترافية من الصفر.
+                    </p>
+                    <p class="about-bio">
+                        إذا أردت مساعدة في سيرفرك، تواصل معي في الخاص —
+                        وأرجى أن يكون السيرفر <strong>Not NSFW</strong>.
+                    </p>
+                    <div class="about-skills">
+                        <div class="skill-tag"><i class="fas fa-server"></i> إدارة السيرفرات</div>
+                        <div class="skill-tag"><i class="fas fa-palette"></i> التصميم</div>
+                        <div class="skill-tag"><i class="fas fa-gamepad"></i> Gaming</div>
+                        <div class="skill-tag"><i class="fas fa-users"></i> Community</div>
+                    </div>
+                    <a href="https://discord.com/users/yacine_citys" target="_blank" class="discord-btn">
+                        <i class="fab fa-discord"></i>
+                        تواصل معي — yacine_citys
+                    </a>
+                </div>
+                <div class="about-visual">
+                    <div class="avatar-frame">
+                        <div class="avatar-inner">
+                            <i class="fas fa-user-astronaut"></i>
+                        </div>
+                        <div class="avatar-ring r1"></div>
+                        <div class="avatar-ring r2"></div>
+                        <div class="avatar-tag">yacine_citys</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TUTORIALS -->
+    <section id="tutorials">
+        <div class="container">
+            <div class="section-tag">02 / الدروس</div>
+            <h2 class="section-title">تعلّم السيرفرات<span class="dot">.</span></h2>
+            <p class="section-sub">دروس احترافية لمساعدتك في بناء سيرفر أسطوري من الصفر</p>
+
+            <div class="filter-tabs">
+                <button class="filter-btn active" data-filter="all">الكل</button>
+                <button class="filter-btn" data-filter="Community">كوميونتي</button>
+                <button class="filter-btn" data-filter="Roles">الرتب</button>
+                <button class="filter-btn" data-filter="Bots">البوتات</button>
+                <button class="filter-btn" data-filter="Design">التصميم</button>
+            </div>
+
+            <div class="tutorials-grid" id="tutorialsGrid">
+                <!-- Cards injected by JS -->
+            </div>
+
+            <!-- ADD TUTORIAL MODAL TRIGGER (Admin) -->
+            <div class="admin-section">
+                <button class="btn btn-outline" id="openAdminBtn">
+                    <i class="fas fa-plus"></i> إضافة درس جديد
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- HELP REQUEST -->
+    <section id="help">
+        <div class="container">
+            <div class="section-tag">03 / مساعدة</div>
+            <div class="help-grid">
+                <div class="help-text">
+                    <h2 class="section-title">اطلب مساعدتي<span class="dot">.</span></h2>
+                    <p>هل تريد مساعدة في بناء سيرفرك؟ أملأ الفورم وسأتواصل معك في الخاص على ديسكورد.</p>
+                    <ul class="help-rules">
+                        <li><i class="fas fa-check"></i> السيرفر يجب أن يكون Not NSFW</li>
+                        <li><i class="fas fa-check"></i> يجب تحديد نوع السيرفر (Community، Gaming...)</li>
+                        <li><i class="fas fa-check"></i> الرد خلال 24 ساعة</li>
+                        <li><i class="fas fa-times text-red"></i> لا يُقبل السب والشتم</li>
+                    </ul>
+                </div>
+                <div class="help-form-wrap">
+                    <form id="helpForm" class="help-form">
+                        <div class="form-group">
+                            <label>اسمك</label>
+                            <input type="text" id="visitorName" placeholder="اكتب اسمك..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>تاغ ديسكورد</label>
+                            <input type="text" id="visitorDiscord" placeholder="مثال: username#0000">
+                        </div>
+                        <div class="form-group">
+                            <label>تفاصيل الطلب</label>
+                            <textarea id="requestDetails" rows="5" placeholder="صف سيرفرك وماذا تحتاج..." required></textarea>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="nsfwCheck" required>
+                                <span>أؤكد أن السيرفر Not NSFW</span>
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary full-width" id="submitBtn">
+                            <i class="fas fa-paper-plane"></i> إرسال الطلب
+                        </button>
+                        <div id="formMessage" class="form-message"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer id="footer">
+        <div class="container">
+            <div class="footer-inner">
+                <div class="footer-logo">yacine<span>_citys</span></div>
+                <p class="footer-tagline">صانع السيرفرات الأسطورية</p>
+                <div class="footer-socials">
+                    <a href="https://discord.com/users/yacine_citys" target="_blank" title="Discord">
+                        <i class="fab fa-discord"></i>
+                    </a>
+                </div>
+                <p class="footer-copy">© 2025 yacine_citys — All rights reserved</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ADMIN MODAL -->
+    <div class="modal-overlay" id="adminModal">
+        <div class="modal">
+            <button class="modal-close" id="closeAdminBtn"><i class="fas fa-times"></i></button>
+            <h3 class="modal-title">إضافة درس جديد</h3>
+            <div class="form-group">
+                <label>عنوان الدرس</label>
+                <input type="text" id="newTitle" placeholder="مثال: كيف تصنع رتب احترافية">
+            </div>
+            <div class="form-group">
+                <label>التصنيف</label>
+                <select id="newCategory">
+                    <option value="Community">Community</option>
+                    <option value="Roles">Roles</option>
+                    <option value="Bots">Bots</option>
+                    <option value="Design">Design</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>محتوى الشرح</label>
+                <textarea id="newContent" rows="4" placeholder="اكتب شرح الدرس هنا..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>رابط الفيديو (اختياري)</label>
+                <input type="url" id="newVideo" placeholder="https://youtube.com/...">
+            </div>
+            <button class="btn btn-primary full-width" id="saveTutorialBtn">
+                <i class="fas fa-save"></i> حفظ الدرس
+            </button>
+
+            <!-- سجل الزوار — يظهر فقط للآدمن -->
+            <div id="visitorLog" style="margin-top:2rem;border-top:1px solid var(--gray-border);padding-top:1rem;display:none;">
+                <h4 style="margin-bottom:0.8rem;font-size:0.9rem;color:var(--gray-text);">سجل الأجهزة التي دخلت</h4>
+                <ul id="visitorList" style="font-family:var(--font-mono);font-size:0.7rem;color:var(--gray-text);max-height:200px;overflow-y:auto;"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+</body>
+</html>
