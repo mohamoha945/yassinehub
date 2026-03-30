@@ -244,16 +244,16 @@
         </div>
     </div>
 
-    <!-- DELETE CONFIRMATION MODAL -->
-    <div class="modal-overlay" id="deleteModal">
+    <!-- CONFIRM DELETE MODAL -->
+    <div class="modal-overlay" id="confirmDeleteModal">
         <div class="modal" style="max-width: 400px;">
-            <button class="modal-close" id="closeDeleteBtn"><i class="fas fa-times"></i></button>
-            <h3 class="modal-title">حذف الدرس</h3>
-            <p>هل أنت متأكد من حذف هذا الدرس؟</p>
-            <p style="color: var(--gray-text); font-size: 0.9rem; margin: 1rem 0;" id="deleteTitleText"></p>
-            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                <button class="btn btn-outline" id="cancelDeleteBtn" style="flex: 1;">إلغاء</button>
-                <button class="btn btn-primary" id="confirmDeleteBtn" style="flex: 1; background: #dc2626; color: white;">حذف</button>
+            <button class="modal-close" id="closeConfirmDeleteBtn"><i class="fas fa-times"></i></button>
+            <h3 class="modal-title">تأكيد الحذف</h3>
+            <p>اكتب <strong style="color: #dc2626;">ايوه</strong> لتأكيد حذف الدرس:</p>
+            <input type="text" id="confirmDeleteInput" placeholder="ايوه" style="width:100%; padding:0.75rem; margin:1rem 0; background:var(--gray-dark); border:1px solid var(--gray-border); border-radius:8px; color:white;">
+            <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                <button class="btn btn-outline" id="cancelConfirmDeleteBtn" style="flex: 1;">إلغاء</button>
+                <button class="btn btn-primary" id="executeDeleteBtn" style="flex: 1; background: #dc2626; color: white;" disabled>حذف</button>
             </div>
         </div>
     </div>
