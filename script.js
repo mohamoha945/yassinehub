@@ -4,7 +4,7 @@
 
 // ---- SUPABASE CONFIG ----
 // غيّر هذين السطرين ببياناتك من: Supabase → Settings → API
-const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+const SUPABASE_URL      = 'https://hdwmfckgxhpbkwsfsdma.supabase.co';
 const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
